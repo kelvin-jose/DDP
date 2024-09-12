@@ -1,0 +1,1 @@
+This is a minimal implementation of DistributedDataParallel or DDP in PyTorch. 
