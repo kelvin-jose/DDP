@@ -1,6 +1,9 @@
+import os
 import torch
 import numpy as np
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
 
 X_train = np.load("/mnt/data/sample/X_train.npy")
 y_train = np.load("/mnt/data/sample/y_train.npy")
@@ -34,6 +37,29 @@ class SimpleModel(torch.nn.Module):
     def forward(self, x):
         logits = self.linear(x)
         return self.softmax(logits)
+    
+is_ddp = os.getenv('RANK', -1) != -1
+global_rank = 0
+local_rank = 0
+world_size = 1
+sampler = None
+
+if is_ddp:
+    global_rank = os.getenv('RANK')
+    local_rank = os.getenv('LOCAL_RANK')
+    world_size = os.getnv('WORLD_SIZE')
+    sampler = DistributedSampler(train_dataset, shuffle=True)
+
+print(f'[x] DDP available: {is_ddp}')
+
+if global_rank == 0:
+    print(f'[x] Local Rank: {local_rank}')
+    print(f'[x] World Size: {world_size}')
+
+train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=False, sampler=sampler)
+val_dataloader = DataLoader(val_dataset, batch_size=4, shuffle=True)
+
+
 
 
 
