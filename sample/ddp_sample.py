@@ -9,7 +9,7 @@ num_classes = 4
 
 dataX = np.random.randn(num_records, num_features)
 dataY = np.concatenate([[c] * (num_records // num_classes) for c in range(num_classes)])
-X_train, X_test, y_train, y_test = train_test_split(
+X_train, X_val, y_train, y_val = train_test_split(
     dataX, 
     dataY, 
     test_size=0.3,  
@@ -33,7 +33,8 @@ class SimpleDataset(Dataset):
         }
     
 train_dataset = SimpleDataset(X_train, y_train)
-test_dataset = SimpleDataset(X_test, y_test)
+val_dataset = SimpleDataset(X_test, y_test)
+
          
         
 
