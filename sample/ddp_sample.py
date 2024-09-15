@@ -1,21 +1,11 @@
 import torch
 import numpy as np
 from torch.utils.data import Dataset
-from sklearn.model_selection import train_test_split
 
-num_records = 100000
-num_features = 16
-num_classes = 4
-
-dataX = np.random.randn(num_records, num_features)
-dataY = np.concatenate([[c] * (num_records // num_classes) for c in range(num_classes)])
-X_train, X_val, y_train, y_val = train_test_split(
-    dataX, 
-    dataY, 
-    test_size=0.3,  
-    random_state=42,  
-    stratify=dataY
-)
+X_train = np.load("/mnt/data/sample/X_train.npy")
+y_train = np.load("/mnt/data/sample/y_train.npy")
+X_val = np.load("/mnt/data/sample/X_val.npy")
+y_val = np.load("/mnt/data/sample/y_val.npy")
 
 class SimpleDataset(Dataset):
     def __init__(self, X, y):
@@ -33,7 +23,19 @@ class SimpleDataset(Dataset):
         }
     
 train_dataset = SimpleDataset(X_train, y_train)
-val_dataset = SimpleDataset(X_test, y_test)
+val_dataset = SimpleDataset(X_val, y_val)
+
+class SimpleModel(torch.nn.Module):
+    def __init__(self, fin, fout) -> None:
+        super().__init__()
+        self.linear = torch.nn.Linear(fin, fout)
+        self.softmax = torch.nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        logits = self.linear(x)
+        return self.softmax(logits)
+
+
 
          
         
