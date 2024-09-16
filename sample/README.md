@@ -7,7 +7,6 @@ This repository contains a sample implementation of Distributed Data Parallel (D
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Setup](#setup)
-- [Usage](#usage)
 - [Script Explanation](#script-explanation)
 - [Notes](#notes)
 - [License](#license)
