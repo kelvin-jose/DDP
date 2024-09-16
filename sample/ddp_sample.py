@@ -64,19 +64,22 @@ if global_rank == 0:
 
 if is_ddp:
     sampler = DistributedSampler(train_dataset, shuffle=True)
-train_dataloader = DataLoader(train_dataset, batch_size=512, shuffle=False, sampler=sampler)
-val_dataloader = DataLoader(val_dataset, batch_size=512, shuffle=True)
+train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=False, sampler=sampler)
+val_dataloader = DataLoader(val_dataset, batch_size=64, shuffle=True)
 
 fin = X_train.shape[1]
 fout = len(np.unique(y_train))
+
 model = SimpleModel(fin=fin, fout=fout).to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 bias_params = [p for name, p in model.named_parameters() if 'bias' in name]
 others = [p for name, p in model.named_parameters() if 'bias' not in name]
+total_params = sum(p.numel() for p in model.parameters())
+print(f'[x] total params: {total_params}')
 optimizer = torch.optim.AdamW(params=[
-                {'params': others, 'weight_decay': 0.3},
+                {'params': others, 'weight_decay': 1e-4},
                 {'params': bias_params, 'weight_decay': 0}
-            ], lr=1e-2)
+            ], lr=1e-4)
 
 if is_ddp:
     model = DistributedDataParallel(model, device_ids=[local_rank])
