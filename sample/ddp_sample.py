@@ -64,8 +64,8 @@ if global_rank == 0:
 
 if is_ddp:
     sampler = DistributedSampler(train_dataset, shuffle=True)
-train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=False, sampler=sampler)
-val_dataloader = DataLoader(val_dataset, batch_size=4, shuffle=True)
+train_dataloader = DataLoader(train_dataset, batch_size=512, shuffle=False, sampler=sampler)
+val_dataloader = DataLoader(val_dataset, batch_size=512, shuffle=True)
 
 fin = X_train.shape[1]
 fout = len(np.unique(y_train))
@@ -74,16 +74,16 @@ loss_fn = torch.nn.CrossEntropyLoss()
 bias_params = [p for name, p in model.named_parameters() if 'bias' in name]
 others = [p for name, p in model.named_parameters() if 'bias' not in name]
 optimizer = torch.optim.AdamW(params=[
-                {'params': others},
+                {'params': others, 'weight_decay': 0.3},
                 {'params': bias_params, 'weight_decay': 0}
-            ], lr=1e-3)
+            ], lr=1e-2)
 
 if is_ddp:
     model = DistributedDataParallel(model, device_ids=[local_rank])
 
-model.train()
-n_epochs = 10
+n_epochs = 100
 for e in range(n_epochs):
+    model.train()
     for idx, batch in enumerate(train_dataloader):
         X = batch['X'].to(device)
         y = batch['y'].to(device)
@@ -92,9 +92,16 @@ for e in range(n_epochs):
         loss = loss_fn(y_pred, y)
         loss.backward()
         optimizer.step()
-        if idx%100==0:
-            print(f'[x] epoch: {e} | step: {idx} | loss: {loss.detach().cpu().numpy()}')
-
+    model.eval()
+    valid_loss = []
+    with torch.no_grad():
+        for vidx, vbatch in enumerate(val_dataloader):
+            vX = vbatch['X'].to(device)
+            vy = vbatch['y'].to(device)
+        vy_pred = model(vX)
+        vloss = loss_fn(vy_pred, vy).detach().cpu().numpy()
+        valid_loss.append(vloss)
+    print(f'[x] epoch: {e} | train loss: {loss.detach().cpu().numpy():.6f} | valid loss: {np.mean(valid_loss):.6f}')
 
 dist.destroy_process_group()
          
