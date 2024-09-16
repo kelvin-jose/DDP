@@ -55,8 +55,7 @@ if is_ddp:
     world_size = int(os.getenv('WORLD_SIZE'))
     dist.init_process_group(backend="nccl")
 
-device = f"cuda:{local_rank}"
-torch.cuda.set_device(device)
+torch.cuda.set_device(local_rank)
     
 if global_rank == 0:
     print(f'[x] Local Rank: {local_rank}')
@@ -70,6 +69,7 @@ val_dataloader = DataLoader(val_dataset, batch_size=64, shuffle=True)
 fin = X_train.shape[1]
 fout = len(np.unique(y_train))
 
+device = f"cuda:{local_rank}"
 model = SimpleModel(fin=fin, fout=fout).to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 bias_params = [p for name, p in model.named_parameters() if 'bias' in name]
