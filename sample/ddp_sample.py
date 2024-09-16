@@ -24,7 +24,7 @@ class SimpleDataset(Dataset):
     def __getitem__(self, index):
         return {
             'X': torch.tensor(self.X[index], dtype=torch.float32),
-            'y': torch.tensor(self.y[index], dtype=torch.int16)
+            'y': torch.tensor(self.y[index], dtype=torch.long)
         }
     
 train_dataset = SimpleDataset(X_train, y_train)
@@ -70,9 +70,31 @@ val_dataloader = DataLoader(val_dataset, batch_size=4, shuffle=True)
 fin = X_train.shape[1]
 fout = len(np.unique(y_train))
 model = SimpleModel(fin=fin, fout=fout).to(device)
+loss_fn = torch.nn.CrossEntropyLoss()
+bias_params = [p for name, p in model.named_parameters() if 'bias' in name]
+others = [p for name, p in model.named_parameters() if 'bias' not in name]
+optimizer = torch.optim.AdamW(params=[
+                {'params': others},
+                {'params': bias_params, 'weight_decay': 0}
+            ], lr=1e-3)
 
 if is_ddp:
     model = DistributedDataParallel(model, device_ids=[local_rank])
+
+model.train()
+n_epochs = 10
+for e in range(n_epochs):
+    for idx, batch in enumerate(train_dataloader):
+        X = batch['X'].to(device)
+        y = batch['y'].to(device)
+        optimizer.zero_grad()
+        y_pred = model(X)
+        loss = loss_fn(y_pred, y)
+        loss.backward()
+        optimizer.step()
+        if idx%100==0:
+            print(f'[x] epoch: {e} | step: {idx} | loss: {loss.detach().cpu().numpy()}')
+
 
 dist.destroy_process_group()
          
