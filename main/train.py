@@ -1,5 +1,21 @@
 from litgpt.model import GPT
 from litgpt.config import Config
+from dataloader import DistributedDataLoader
+
+import os
+import torch
+import torch.distributed as dist
+
+assert torch.cuda.is_available(), "GPU is not available!"    
+is_ddp = os.getenv('RANK', -1) != -1
+print('[x] is DDP:', is_ddp)
+
+if is_ddp:
+    rank = os.getenv('RANK')
+    local_rank = int(os.getenv('LOCAL_RANK'))
+    world_size = int(os.getenv('WORLD_SIZE'))
+    dist.init_process_group(backend='nccl')
+torch.cuda.set_device(local_rank)
 
 micro_llama = dict(
         name="micro-llama-4M",
