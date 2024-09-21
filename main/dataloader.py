@@ -19,7 +19,7 @@ class DistributedDataLoader:
         y = torch.tensor(buffer[1:], dtype=torch.long).view(self.B, self.T)
         self.curr_index += self.world_size * self.B * self.T
         if (self.curr_index + self.B * self.T + 1) > len(self.tokens):
-            self.curr_index = 0
+            self.curr_index = self.global_rank * self.B * self.T
         return x, y
 
 
