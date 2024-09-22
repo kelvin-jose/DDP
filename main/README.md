@@ -12,7 +12,7 @@ This repository contains a PyTorch implementation for training a small Llama mod
 - Training and Validation Loops: Provides structured loops for both training and validation phases, including loss computation and logging.
 - Compatibility: Designed to work with PyTorch and CUDA-enabled GPUs.
 
-To run,
+## To run,
 ```bash
    torchrun --standalone --nproc-per-node=4 --nnodes=1 train.py --train_file "/mnt/train/train.pkl" --valid_file "/mnt/val/val.pkl"
    ```
