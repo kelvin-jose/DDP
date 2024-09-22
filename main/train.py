@@ -3,8 +3,12 @@ from litgpt.config import Config
 from dataloader import DistributedDataLoader
 
 import os
+import tqdm
 import torch
+import numpy as np
 import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel
+
 
 assert torch.cuda.is_available(), "GPU is not available!"    
 is_ddp = os.getenv('RANK', -1) != -1
@@ -37,4 +41,53 @@ micro_llama = dict(
 
 config = Config(**micro_llama)
 model = GPT(config)
+model.cuda()
+model = DistributedDataParallel(model, device_ids=[local_rank])
+loss_fn = torch.nn.CrossEntropyLoss()
+bias_params = [p for name, p in model.named_parameters() if 'bias' in name]
+others = [p for name, p in model.named_parameters() if 'bias' not in name]
+total_params = sum(p.numel() for p in model.parameters())
+optimizer = torch.optim.AdamW(params=[
+                {'params': others, 'weight_decay': 1e-4},
+                {'params': bias_params, 'weight_decay': 0}
+            ], lr=5e-3)
+
 print('number of params:', sum(p.numel() for p in model.parameters()))
+
+T = 32
+B = 64
+train_dataloader = DistributedDataLoader("/home/machine-x/Downloads/archive/train.pkl", B, T, rank, world_size)
+val_dataloader = DistributedDataLoader("/home/machine-x/Downloads/archive/val.pkl", T = 32)
+
+epochs = 10
+num_iters = 1000
+for e in range(epochs):
+    model.train()
+    for iter in tqdm.tqdm(range(num_iters), desc=f"Epoch {e}"): 
+        batch = train_dataloader.get_batch()
+        if batch['eod']:
+            break
+        X = batch['x'].cuda()
+        y = batch['y'].cuda()
+        optimizer.zero_grad()
+        y_pred = model(X)
+        b,t,c = y_pred.shape
+        loss = loss_fn(y_pred.view(b*t, c), y.view(-1))
+        loss.backward()
+        optimizer.step()
+
+    model.eval()
+    valid_loss = []
+    with torch.no_grad():
+        for iter in range(num_iters):
+            vbatch = val_dataloader.get_batch()
+            vX = vbatch['x'].cuda()
+            vy = vbatch['y'].cuda()
+        vy_pred = model(vX)
+        b,t,c = vy_pred.shape
+        vloss = loss_fn(vy_pred.view(b*t, c), vy.view(-1))
+        valid_loss.append(vloss.detach().cpu().numpy())
+
+    print(f'[x] epoch: {e} | train loss: {loss.detach().cpu().numpy():.6f} | valid loss: {np.mean(valid_loss): .6f}')
+
+dist.destroy_process_group()
