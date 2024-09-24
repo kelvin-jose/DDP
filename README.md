@@ -12,3 +12,11 @@ Distributed Data Parallel (DDP) is a feature in PyTorch designed to facilitate e
 
 - **Performance Benefits**: 
   - Compared to the older `DataParallel` method, DDP is generally faster and more efficient because it avoids the Global Interpreter Lock (GIL) contention found in multi-threaded setups.
+
+## Goals of this project
+
+This project was intended to teach myself how to work with DDP systems in general. For this, I tried implementing two projects one is a small naive neural network with added DDP features which you can find inside ```sample/``` directory. Inside the directory, you will find a single python file that contains all the necessary code to load, train and test a simple network. Inside ```main/``` directory, you will find a slightly complicated example of mini Llama training scripts built with help of [litgpt](https://github.com/Lightning-AI/litgpt) modules. Enjoy reading them.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
