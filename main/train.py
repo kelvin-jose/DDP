@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
         T = args.train_seq_len
         B = args.train_batch_size
-        # "/home/machine-x/Downloads/archive/train.pkl"
+        
         train_dataloader = DistributedDataLoader(args.train_file, B, T, rank, world_size)
         val_dataloader = DistributedDataLoader(args.valid_file, T = args.valid_seq_len)
 
@@ -111,7 +111,7 @@ if __name__ == '__main__':
                                 b,t,c = vy_pred.shape
                                 vloss = loss_fn(vy_pred.view(b*t, c), vy.view(-1))
                                 valid_loss.append(vloss.detach().cpu().numpy())
-
-                print(f'[x] epoch: {e} | train loss: {loss.detach().cpu().numpy():.6f} | valid loss: {np.mean(valid_loss): .6f}')
+                if rank == 0:
+                        print(f'[x] epoch: {e} | train loss: {loss.detach().cpu().numpy():.6f} | valid loss: {np.mean(valid_loss): .6f}')
 
         dist.destroy_process_group()
